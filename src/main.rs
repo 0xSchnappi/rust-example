@@ -1,8 +1,9 @@
+use futures::future::join_all;
 use reqwest::{self, StatusCode};
 use std::{
     sync::{Arc, Mutex},
     thread,
-    time::Duration,
+    time::{Duration, Instant},
 };
 use tokio::{
     runtime::Runtime,
@@ -83,6 +84,31 @@ async fn main() {
     }
 
     println!("All threads have completed.");
+
+    let mut tasks = vec![];
+
+    let start = Instant::now();
+
+    // 启动多个异步任务
+    for i in 0..10 {
+        let task_id = i;
+        let task = tokio::spawn(async move { compute_task(task_id).await });
+        tasks.push(task);
+    }
+
+    // 等待所有任务完成
+    let results = join_all(tasks).await;
+
+    // 输出每个任务的结果
+    for result in results {
+        match result {
+            Ok(message) => println!("{}", message),
+            Err(e) => eprintln!("Task failed: {:?}", e),
+        }
+    }
+
+    let duration = start.elapsed();
+    println!("All tasks completed in {:?}", duration);
 }
 
 async fn get_http_status(url: &str) -> StatusCode {
@@ -98,4 +124,20 @@ async fn get_http_status(url: &str) -> StatusCode {
 
 async fn timeout_async(time_date: Duration) {
     sleep(time_date).await;
+}
+
+// 模拟计算密集型任务的异步函数
+async fn compute_task(task_id: u32) -> String {
+    // 模拟计算密集型操作，例如执行一个长时间计算
+    let result = long_compytation(task_id).await;
+    format!("Task {} completed with result: {}", task_id, result)
+}
+
+// 模拟长时间计算的异步
+async fn long_compytation(task_id: u32) -> u64 {
+    let mut sum = 0;
+    for i in 0..1_000_000 {
+        sum += i * task_id as u64;
+    }
+    return sum;
 }
