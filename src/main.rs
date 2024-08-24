@@ -1,5 +1,9 @@
-use std::time::Duration;
 use reqwest::{self, StatusCode};
+use std::{
+    sync::{Arc, Mutex},
+    thread,
+    time::Duration,
+};
 use tokio::time::{sleep, timeout};
 
 #[tokio::main]
@@ -32,6 +36,24 @@ async fn main() {
             Err(_) => println!("Task [{}] timed out", i),
         }
     }
+
+    // 案例3：多线程数据共享
+    let counters = Arc::new(Mutex::new(0_u32));
+    let mut handles = vec![];
+    for _ in 0..10 {
+        let counter = Arc::clone(&counters);
+        let handle = thread::spawn(move || {
+            let mut num = counter.lock().unwrap();
+            *num += 1;
+        });
+        handles.push(handle);
+    }
+
+    for handle in handles {
+        handle.join().unwrap();
+    }
+
+    println!("counter:{}", counters.lock().unwrap());
 }
 
 async fn get_http_status(url: &str) -> StatusCode {
