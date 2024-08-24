@@ -4,7 +4,10 @@ use std::{
     thread,
     time::Duration,
 };
-use tokio::time::{sleep, timeout};
+use tokio::{
+    runtime::Runtime,
+    time::{sleep, timeout},
+};
 
 #[tokio::main]
 async fn main() {
@@ -54,6 +57,32 @@ async fn main() {
     }
 
     println!("counter:{}", counters.lock().unwrap());
+
+    // 案例4：异步和多线程混合
+    let mut handles = vec![];
+    for i in 0..10 {
+        let handle = thread::spawn(move || {
+            // 在每个线程中创建一个 tokio 运行时
+            let rt = Runtime::new().unwrap();
+
+            // 使用运行时来执行异步任务
+            rt.block_on(async {
+                // 模拟I/O操作
+                sleep(Duration::from_secs(3)).await;
+                // 输出线程编写和任务完成的消息
+                println!("Thread {}: Task completed", i);
+            });
+        });
+
+        handles.push(handle);
+    }
+
+    // 等待所有线程完成
+    for handle in handles {
+        handle.join().unwrap();
+    }
+
+    println!("All threads have completed.");
 }
 
 async fn get_http_status(url: &str) -> StatusCode {
